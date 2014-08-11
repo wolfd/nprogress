@@ -1,6 +1,9 @@
 NProgress
 =========
 
+Changes nprogress to use multiple progress bars overlaid. 
+WARNING: this was just a test to see how it would look, needs some developer love if you really want to use it. 
+
 Slim progress bars for Ajax'y applications. Inspired by Google, YouTube, and
 Medium.
 
@@ -8,9 +11,10 @@ Medium.
 Installation
 ------------
 
-Add [nprogress.js] and [nprogress.css] to your project.
+Add [nprogress.js] and [nprogress.css] to your project as well as [please.js].
 
 ```html
+<script src='vendor/please.js'></script>
 <script src='nprogress.js'></script>
 <link rel='stylesheet' href='nprogress.css'/>
 ```
@@ -177,6 +181,7 @@ https://github.com/rstacruz/nprogress/blob/master/nprogress.js#L31
 [Turbolinks]: https://github.com/rails/turbolinks
 [nprogress.js]: http://ricostacruz.com/nprogress/nprogress.js
 [nprogress.css]: http://ricostacruz.com/nprogress/nprogress.css
+[please.js]: http://www.checkman.io/please/
 
 Thanks
 ------
