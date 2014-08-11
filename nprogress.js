@@ -16,6 +16,8 @@
 
   NProgress.version = '0.1.6';
 
+  NProgress.progressId = 0;
+
   var Settings = NProgress.settings = {
     minimum: 0.08,
     easing: 'ease',
@@ -24,11 +26,9 @@
     trickle: true,
     trickleRate: 0.02,
     trickleSpeed: 800,
-    showSpinner: true,
     barSelector: '[role="bar"]',
-    spinnerSelector: '[role="spinner"]',
     parent: 'body',
-    template: '<div class="bar" role="bar"><div class="peg"></div></div><div class="spinner" role="spinner"><div class="spinner-icon"></div></div>'
+    template: '<div class="bar" role="bar"><div class="peg"></div></div>'
   };
 
   /**
@@ -49,10 +49,11 @@
   };
 
   /**
-   * Last number.
+   * Array of last numbers.
    */
 
-  NProgress.status = null;
+  NProgress.status = [];
+  NProgress.colors = [];
 
   /**
    * Sets the progress bar status, where `n` is a number from `0.0` to `1.0`.
@@ -61,13 +62,13 @@
    *     NProgress.set(1.0);
    */
 
-  NProgress.set = function(n) {
-    var started = NProgress.isStarted();
+  NProgress.set = function(id, n) {
+    var started = NProgress.isStarted(id);
 
     n = clamp(n, Settings.minimum, 1);
-    NProgress.status = (n === 1 ? null : n);
+    NProgress.status[id] = (n === 1 ? null : n);
 
-    var progress = NProgress.render(!started),
+    var progress = NProgress.render(id, !started),
         bar      = progress.querySelector(Settings.barSelector),
         speed    = Settings.speed,
         ease     = Settings.easing;
@@ -95,7 +96,7 @@
             opacity: 0 
           });
           setTimeout(function() {
-            NProgress.remove();
+            NProgress.remove(id);
             next();
           }, speed);
         }, speed);
@@ -107,8 +108,8 @@
     return this;
   };
 
-  NProgress.isStarted = function() {
-    return typeof NProgress.status === 'number';
+  NProgress.isStarted = function(id) {
+    return typeof NProgress.status[id] === 'number';
   };
 
   /**
@@ -119,19 +120,20 @@
    *
    */
   NProgress.start = function() {
-    if (!NProgress.status) NProgress.set(0);
+    var myId = NProgress.progressId;
+    NProgress.set(myId, 0);
 
     var work = function() {
       setTimeout(function() {
-        if (!NProgress.status) return;
-        NProgress.trickle();
+        if (!NProgress.status[myId]) return;
+        NProgress.trickle(myId);
         work();
       }, Settings.trickleSpeed);
     };
 
     if (Settings.trickle) work();
 
-    return this;
+    return NProgress.progressId++;
   };
 
   /**
@@ -146,19 +148,18 @@
    *     NProgress.done(true);
    */
 
-  NProgress.done = function(force) {
-    if (!force && !NProgress.status) return this;
+  NProgress.done = function(id, force) {
+    if (!force && !NProgress.status[id]) return this;
 
-    return NProgress.inc(0.3 + 0.5 * Math.random()).set(1);
+    return NProgress.inc(id, 0.3 + 0.5 * Math.random()).set(id, 1);
   };
 
   /**
    * Increments by a random amount.
    */
 
-  NProgress.inc = function(amount) {
-    var n = NProgress.status;
-
+  NProgress.inc = function(id, amount) {
+    var n = NProgress.status[id];
     if (!n) {
       return NProgress.start();
     } else {
@@ -167,12 +168,12 @@
       }
 
       n = clamp(n + amount, 0, 0.994);
-      return NProgress.set(n);
+      return NProgress.set(id, n);
     }
   };
 
-  NProgress.trickle = function() {
-    return NProgress.inc(Math.random() * Settings.trickleRate);
+  NProgress.trickle = function(id) {
+    return NProgress.inc(id, Math.random() * Settings.trickleRate);
   };
 
   /**
@@ -190,7 +191,7 @@
       }
       
       if (current == 0) {
-        NProgress.start();
+        $promise.nprogressId = NProgress.start();
       }
       
       initial++;
@@ -200,9 +201,9 @@
         current--;
         if (current == 0) {
             initial = 0;
-            NProgress.done();
+            NProgress.done(this.nprogressId);
         } else {
-            NProgress.set((initial - current) / initial);
+            NProgress.set(this.nprogressId, (initial - current) / initial);
         }
       });
       
@@ -216,29 +217,25 @@
    * setting.
    */
 
-  NProgress.render = function(fromStart) {
-    if (NProgress.isRendered()) return document.getElementById('nprogress');
-
+  NProgress.render = function(id, fromStart) {
+    if (NProgress.isRendered(id)) return document.getElementById('nprogress' + id);
+    
     addClass(document.documentElement, 'nprogress-busy');
     
     var progress = document.createElement('div');
-    progress.id = 'nprogress';
+    progress.id = 'nprogress' + id;
+    addClass(progress, 'nprogress');
     progress.innerHTML = Settings.template;
 
     var bar      = progress.querySelector(Settings.barSelector),
         perc     = fromStart ? '-100' : toBarPerc(NProgress.status || 0),
-        parent   = document.querySelector(Settings.parent),
-        spinner;
+        parent   = document.querySelector(Settings.parent);
     
     css(bar, {
       transition: 'all 0 linear',
-      transform: 'translate3d(' + perc + '%,0,0)'
+      transform: 'translate3d(' + perc + '%,0,0)',
+      background: NProgress.colors[id] || (NProgress.colors[id] = Please.make_color())
     });
-
-    if (!Settings.showSpinner) {
-      spinner = progress.querySelector(Settings.spinnerSelector);
-      spinner && removeElement(spinner);
-    }
 
     if (parent != document.body) {
       addClass(parent, 'nprogress-custom-parent');
@@ -252,10 +249,10 @@
    * Removes the element. Opposite of render().
    */
 
-  NProgress.remove = function() {
+  NProgress.remove = function(id) {
     removeClass(document.documentElement, 'nprogress-busy');
-    removeClass(document.querySelector(Settings.parent), 'nprogress-custom-parent')
-    var progress = document.getElementById('nprogress');
+    removeClass(document.querySelector(Settings.parent), 'nprogress-custom-parent');
+    var progress = document.getElementById('nprogress' + id);
     progress && removeElement(progress);
   };
 
@@ -263,8 +260,8 @@
    * Checks if the progress bar is rendered.
    */
 
-  NProgress.isRendered = function() {
-    return !!document.getElementById('nprogress');
+  NProgress.isRendered = function(id) {
+    return !!document.getElementById('nprogress' + id);
   };
 
   /**

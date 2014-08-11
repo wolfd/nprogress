@@ -26,11 +26,11 @@ NProgress is available via [bower] and [npm].
 Basic usage
 -----------
 
-Simply call `start()` and `done()` to control the progress bar.
+Simply call `start()` and `done(id)` to control the progress bar.
 
 ~~~ js
-NProgress.start();
-NProgress.done();
+NProgress.start() - returns id;
+NProgress.done(id);
 ~~~
 
 Using [Turbolinks] or similar? Ensure you're using Turbolinks 1.3.0+, and use 
@@ -38,9 +38,9 @@ this: (explained
     [here](https://github.com/rstacruz/nprogress/issues/8#issuecomment-23010560))
 
 ~~~ js
-$(document).on('page:fetch',   function() { NProgress.start(); });
-$(document).on('page:change',  function() { NProgress.done(); });
-$(document).on('page:restore', function() { NProgress.remove(); });
+$(document).on('page:fetch',   function() { curProgressId = NProgress.start(); });
+$(document).on('page:change',  function() { NProgress.done(curProgressId); });
+$(document).on('page:restore', function() { NProgress.remove(curProgressId); });
 ~~~
 
 Ideas
@@ -59,23 +59,23 @@ __Percentages:__ To set a progress percentage, call `.set(n)`, where *n* is a
 number between `0..1`.
 
 ~~~ js
-NProgress.set(0.0);     // Sorta same as .start()
-NProgress.set(0.4);
-NProgress.set(1.0);     // Sorta same as .done()
+NProgress.set(id, 0.0);     // Sorta same as .start()
+NProgress.set(id, 0.4);
+NProgress.set(id, 1.0);     // Sorta same as .done()
 ~~~
 
-__Incrementing:__ To increment the progress bar, just use `.inc()`. This
+__Incrementing:__ To increment the progress bar, just use `.inc(id)`. This
 increments it with a random amount. This will never get to 100%: use it for
 every image load (or similar).
 
 ~~~ js
-NProgress.inc();
+NProgress.inc(id);
 ~~~
 
 If you want to increment by a specific value, you can pass that as a parameter:
 
 ~~~ js
-NProgress.inc(0.2);    // This will get the current status value and adds 0.2 until status is 0.994
+NProgress.inc(id, 0.2);    // This will get the current status value and adds 0.2 until status is 0.994
 ~~~
 
 __Force-done:__ By passing `true` to `done()`, it will show the progress bar
@@ -83,7 +83,7 @@ even if it's not being shown. (The default behavior is that *.done()* will not
     do anything if *.start()* isn't called)
 
 ~~~ js
-NProgress.done(true);
+NProgress.done(id, true);
 ~~~
 
 __Get the status value:__ To get the status value, use `.status`
